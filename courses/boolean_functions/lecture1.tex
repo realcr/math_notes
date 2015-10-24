@@ -1,0 +1,116 @@
+\part{Intro}
+
+22.10.2015
+
+Boolean functions and error correcting codes (Shmuel Safra)
+There should be notes for the entire course.
+
+Course requirements:
+
+- A test in the end of the semester.
+  - Maybe a smaller test in the middle?
+
+- Homework. Will not get credit. No checker for the homework.
+  Probably every two weeks.
+
+- Difficult problem (Star problem) in the middle of the lecture.
+
+Topics that we will learn in this course:
+
+\begin{enumerate}
+  \item ECC (Error correccting codes)
+  \item Boolean functions  $f: (\{0,1\}}^n \rightarrow \{0,1\)$
+  \item Learning (Finding things about Boolean functions quickly).
+  \item Cryptography
+  \item Hardness of approximation
+\end{enumerate}
+
+\uline{Boolean functions:}
+
+Interesting functions: xor, majority, dictatorship (One bit of the input
+is the result). Majority is not so sensitive to noise. Majority stablest
+theorem.
+
+\begin{defn}
+The influence of the variable $x_i$.
+$I_i[f] = {\Pr}_x\left[{f(x) \neq f(x^i)}\right]$
+The sum of influences is $I[f] = \sum{I_i[f]}$.
+\end{defn}
+
+Dicataorship has influence of $1$.
+
+What is the influence value of majority? About $\sqrt(n)$.
+
+\begin{defn}
+A monotone function is a function that when changing a variable from $0$ to $1$
+does not change its value from $1$ to $0$.
+\end{defn}
+
+The idea of functions where only small amount of variables determines the final
+value of the function. (Hunta?)
+
+\uline{Learning}
+
+Learning boolean functions.
+PAC (Probably approximately correct).
+
+(PAC learning for abelian groups, fourier sparse)
+
+Sampling a few values and building a similar function that has similar
+properties?
+
+Some functions can not be approximated using this method (For example, random
+functions).
+
+Functions with low total influence might be easier to learn.
+
+Supervised learning. The ability to give challenges to a function. This is not
+always what we have in real life. (Unsupervised learning).
+
+\uline{Cryptography}
+
+One way functions. Public key Cryptography: One way functions with trapdoor.
+
+\begin{defn}
+One way function: $f: X \rightarrow X$
+Given $f(x)$ it is hard to compute $x'$ such that $f(x')=f(x)$
+\end{defn}
+
+
+\uline{Hard Core Predicate}
+
+Sidenote?
+The discrete log problem:
+Given $g^x \mod p$ : Find $x$.
+
+Given a one way function, we want to be able to find a bit that is hard to
+discover. (A stronger requirement of a one way function).
+
+\part{Error Correcting Codes}
+
+We write bits in memory. We want to be able to recover the information in case
+some of the bits are changed (Errors).
+
+Important parameters: 
+\begin{enumerate}
+  \item $m$: The length of the block. We have strings of bits of this size.
+  \item $q$: The size of the alphabet. The alphabet set is $[q] =
+    \{0,1,\cdots,q-1\}$. In many cases we will work with the binary alphabet:
+    $[2]$.
+  \item $C \subseteq [q]^m$, the subset of valid code words.
+  \item $d$: Distance: $d(C) := \min{x,y \in C}[{\delta}_H (x,y)]$. ${\delta}_H$
+    is the hamming distance. We should be able to fix at most $d/2$ errors.
+    (TODO: A picture $[q]^m$ with balls around code words of radius $d/2$).
+
+  \item The rate of the code $C$: $r[C] = \log_{q}{|C|} / m$.
+\end{enumerate}
+
+
+\section{Linear Error correcting codes}
+
+Assume that we have a finite field $Q$, where $|Q| = q$.
+Examples for finite fields: $\mathcal{Z}_p$, where $p$ is prime.
+We have such finite fields only of sizes of the form $p^r$, where $p$ is some
+prime. All the finite fields of the same size are isomorphic. (Galois theory).
+
+$Q^m$ is a vector space.
