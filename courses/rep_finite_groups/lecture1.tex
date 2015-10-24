@@ -1,0 +1,139 @@
+Representation Theory
+
+\part{Intro}
+
+Book to get:
+
+Jean Pierre Serre
+
+Linear representation of finite groups
+
+Amazon.com 45 dollars.
+bookzz.org (no money).
+
+Abel prize 2003.
+
+
+\part{}
+
+Let $k$ be a field $k=\mathbf{C}$. $V$ is a vector space of a finite dimension.
+$GL(V)$ is the group of automorphisms of $V$.
+
+Automorphism is:
+$a: V \rightarrow V$ such that there is $a^{-1}$.
+
+Let $e_1,\dots,e_n$ a basis of $V$.
+
+$a(e_j) = \sum_{i} a_{ij}e_i$
+
+$a$ is isomorphism if $det(a_{ij}) \neq 0$.
+
+$GL(V)$ matrices $n\times n$ with $det \neq 0$.
+
+
+$G$ is a finite group. $1 = 1_G$. A rule of multiplication $(s,t) \rightarrow
+st$.
+
+\begin{defn}
+  A linear representation of $G$ is a homomorphism $\ro : G \rightarrow GL(V)$.
+  It is possible to have something in the kernel of the homomorphism.
+
+  This means: For every $s \in G$ we write $\ro(s) \in GL(V)$ such that $\ro(st)
+  = \ro(s)\ro(t)$ for every $s,t \in G$.
+\end{defn}
+
+\uline{Note:}
+
+So:
+$\ro(1_G) = 1_V$.
+$\ro(s^{-1}) = \ro(s)^{-1}$.
+$1_V := 1_GL(v)$.
+
+
+$\ro$ representation. We say that $V$ is the space of representation. (Or that
+$V$ is a representation).
+
+\uline{Examples:}
+
+\begin{enumerate}
+  \item $V = \mathcal{C}^n$. $G$ is some group. $\ro s \rightarrow 1_V$.
+    $\ro(st) = 1_V$, $\ro(s) = \ro(t) = 1_V$. $1_V \cdot 1_V = 1_V$.
+    This is the trivial representation of dimension $n$.
+
+  \item $G = \{1,-1\}$. $V = \mathcal{C}^n$. $\ro(1) = 1_V$. $\ro(-1) = -(1_V)$.
+
+  \item $G = \{1,-1\}$. $V = \mathcal{C}^2$. 
+    \[
+      e_1 = \matrix(1 \\
+                    0)
+                  \]
+
+    \[e_2 = \matrix(0 \\
+                    1
+                  \]
+
+    $1_G \rightarrow 1_V$.
+
+    \[
+      -1 \rightarrow \matrix(0 1 \\
+                            1 0) 
+  \]
+
+  $(-1)^2 = 1$.
+
+
+  $G \rightarrow GL_2(\mathcal{C})$
+  $G \rightarrow GL(V)$.
+
+  \item $G = \{1,-1\}$
+    $V = \mathcal{C}^2$
+    $1_G \rightarrow 1_V$.
+    $-1 \rightarrow \matrix(-1 0\\
+                            0  1)$
+
+
+\end{enumerate}
+
+$V$ a finite dimensional vector space, of dimension $n$.
+$\ro: G \rightarrow GL(V)$.
+
+$e_1,e_2$ base.
+
+
+$R_{st} = R_s \cdot R_t$ for every $s,t \in G$.
+$r_ik(st) = \sum_{j} r_{ij}(s) \cdot r_{jk}(t)$.
+
+Multiplication of matrices?
+
+
+Let $G$ be a group. Let $(\ro,V)$ and $(\ro',V')$ two different representations
+of $G$.
+
+$\ro: G \rightarrow GL(V)$.
+$\ro': G \rightarrow GL(V')$.
+
+Are isomorphic if there exists an isomorphism:
+
+$\tau: V \rightarrow V'$ such that $\tau$ changes $\ro$ to $\ro'$.
+
+$\tau \compose \ro(s) = \ro'(s) \compose \tau$
+
+$V$ -- $\ro(s)$ --> $V$
+ |
+ $\tau$             |
+ |                  $\tau$
+ V                  V
+ $V$ -- $\ro'(s)$ --> $V'$
+
+Commutative.
+$\ro'(s) \compose \tau = \tau \compose \ro(s)$ for every $\s in G$.
+
+Exercise: Build $\tau$ for examples 3,4.
+
+0 1     -1 0
+1 0      0 1
+
+Those two are similar on $\mathcal{C}, \mathcal{R}$, but not on $\mathcal{Z}$.
+
+
+
