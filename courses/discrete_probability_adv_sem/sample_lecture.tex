@@ -1,0 +1,1276 @@
+\part{Short Signatures}
+
+\section{BLS signatures}
+We will use pairing based cryptography to produce a multi-signature scheme. In
+particular, we assume a Gap Diffie Hellman group $G$, where the discrete
+logarithm problem is hard, the computational Diffie Hellman problem is hard, and
+the decisional Diffie Hellman problem is easy. 
+
+The BLS signatures \{TODO: Add a reference here to Dan Boneh's article\} work as
+follows:
+
+There is a Gap Diffie Hellman group $G$, with a generator $g$. The details about
+the group $G$ and the generator $g$ are public. Every node $P_j$ has a private
+key $x_j$, and a public key $g^{x_j}$ that it publishes to all other nodes.
+
+In addition there is a hash function $H$ from the set of finite binary strings
+into the group $G$. 
+
+In order to sign a messages $m$, a node $P_j$ calculates ${H(m)}^{x_j}$ for
+example. In order to verify the signature, every other node who knows the public
+key of $P_j$ can check if $(g,g^{x_j},H(m),{H(m)}^{x_j})$ is a valid Diffie
+Hellman quadruple.
+
+\section{Multi Signatures}
+\{TODO: Point out that this is due to Bolyderva's article\}.
+
+A multi signature is a signature signed by a few participants. The naive
+implementation of such a signature could be, for example, a concatenation of the
+signatures of all the participants. This method works, however the final size of
+the multi signature acheived is linear in the number of signers.
+
+Using BLS signatures we could acheive Multi Signatures of constant size, though
+we will need to add a list of signers next to the signatures, so that the
+verifier could verify the signature.
+
+As before, we have a gap Diffie Hellman group $G$ with a known generator $g$.
+every node $P_j$ has a private key $x_j$ and a public key $g^{x_j}$.
+
+The signature is done as follows: for a message $m$, every node $P_j$ creates a
+BLS signature ${H(m)}^{x_j}$. Assume we have signatures from nodes $P_k$ for $k
+\in I$. The signature then could be combined to be ${\prod}_{k \in
+I}{{H(m)}^{x_k}} = {H(m)}^{\sum_{k \in I}{x_j}}$.
+
+Given a signature $\sigma$ and a set $I$ of participating signers over a message
+$m$, a verifier could check that $(g,{\prod}_{k \in I}{g^{x_k}},H(m),\sigma)$ is
+a valid Diffie Hellman quadruple. If it does, the signature is valid.
+
+Note that for optimization, the set $I$ could be packed so that every bit
+represents a participant. $0$ means: Didn't participate in this signature. $1$
+means: Did participate in this signature.
+
+\section{Threshold Signatures}
+
+Threshold signatures of parameters $(k,n)$ are signatures with the following
+property: Given a set of $n$ nodes, Every $k$ nodes can produce a signature over
+a message $m$ that represents all the set of nodes. However, every set of less
+than $k$ nodes can not produce such a signature. 
+
+An additional desirable property of such a signature is that a single unique
+signature is acheived over the message $m$, no matter which set of $k$ different
+nodes participate in the signature. This property gives a threshold signatures
+scheme the quality of Unpredicted random scheme (See in the next sections). Note
+that we do not know yet how to acheive such property.
+
+As we currently do not have any Threshold Signature scheme which is easy to set
+up in the distributed asynchronous setting, we will use a BLS multi signature
+scheme instead. That means having a set of nodes representing the list of
+signing nodes after every signature. Given a supernode of size n, that means
+about $/frac{n}{8}$ additional bytes, besides the signature. (We can get that if
+we use a bit to represent a nodes who participated in the signature).
+
+Note that it is possible to create a Threshold Signature scheme using BLS
+signatures, given that proper keys are distributed. Every node $P_j$ should be
+handed a secret value $x_j = P(j)$ for example, where $P$ is a polynomial not
+known to the participating nodes. We have not yet managed to find a way to share
+these kind of secrets in an efficient and distributed manner.
+
+\section{Public Verifiable Secret Sharing (PVSS)}
+
+\{TODO: This was taken from the article ``Public Verifiability from Pairings in
+Secret Sharing Schemes''.\}
+
+We sketch here a Public Verifiable Secret Sharing Scheme. This scheme allows a
+node in the supernode to share a secret with all the nodes, such that the secret
+is shared in one public message, and every node can validate this message's
+validity. 
+
+If a valid sharing message was sent, it is guaranteed that the secret could be
+reconstructed later. 
+
+We will use this primitive later to acheive a Common Coin primitive.
+
+We use Pairing Based Cryptography to acheive this primitive. We assume here the
+existence of a group $G$, and a symmetic pairing $e:G^2 \to \tilde{G}$.
+\{TODO: Check if something else needs to be said about $e$ and $\tilde{G}$.\}
+
+We also assume that $G$ has two known generators $h,g \in G$, where no node
+knows $\log_h^g$ (Or $\log_g^h$). Every node $P_j$ has a private value $x_j$ and
+a public value $g^{x_j}$ that he previously published to all nodes. 
+
+In addition, there are known distinct values $k_j$ for every node $P_j$. Once
+can assume for simplicity that $k_j := j$ for all nodes $P_j$.
+
+\uline{Dealer}
+\begin{enumerate}
+  \item Pick a random polynomial $P(y) = {a_0} + {a_1}y + \ldots + {a_q}y^q$.
+  \item Publish $C_i := h^{a_i}$ for all $0 \leq i \leq q$ and $Y_j :=
+    \left(g^{x_j}\right)^{P(k_j)}$ for all nodes $P_j$.
+\end{enumerate}
+
+\uline{Verification of shares from the dealer}
+\begin{enumerate}
+  \item Compute $X_j := {\prod}_{0 \leq i \leq q}{{C_j}^{{k_j}^i}}$
+  \item Check if $e(X_j,g^{x_j}) = e(h,Y_j)$.
+\end{enumerate}
+
+\uline{Getting a common value for some message $m$}
+\begin{enumerate}
+  \item Every Node $P_j$ sends $d_j := {h(m)}^{\frac{1}{x_j}}$. Every node can
+    verify the value $d_j$ by checking that $e(d_j,g^{x_j}) = e(H(m),g)$. Then
+    we define $s_j := e(d_j,\left(g^{x_j}\right)^{P(k_j)}) = e(H(m),g)^{P(k_j)}$.
+  \item Interpolate the values $s_j$ using lagrange polynomial interpolation (We
+    use multiplication instead of addition, and exponentiation instead of
+    multiplication, as all the values are exponentes). Eventually we can
+    calculate ${e(H(m),g)}^{P(0)}$ for example. As the polynomial shared is of
+    degree $q$, we need at least $q+1$ different valid shares to reconstruct
+    ${e(h(m),g)}^{p(0)}$.
+\end{enumerate}
+
+Note that the above scheme can work as a Common Coin primitive, though it does
+not work as a Threshold Signature mechanism. \footnote{We get a common value for
+choice of a any large enough subset of participants, however we don't get a
+signature so that we can verify $m$'s authenticity.}
+
+We show here an alternative way to use the previous construction, for a one time
+secret share and reconstruct. We currently do not use this scheme, though it
+might be useful in the future. \{TODO: By the article ``Public Verifiability
+from Pairings in Secret Sharing Schemes\}
+
+\uline{Alternative: Reconstruct ${e(g,g)}^{P(0)}$}
+\begin{enumerate}
+  \item Every Node $P_j$ sends to all nodes the value $y_j :=
+    {Y_j}^{\frac{1}{x_j}} = g^P(k_j)$.
+  \item Every node can check the value $y_j$ sent by $P_j$ is valid by checking
+    that $e(y_j,g^{x_j}) = e(Y_j,g)$.
+  \item Every node can interpolate the values $y_j$ he has received (At least
+    $q+1$ are needed) and obtain the value $e(g^{P(0)},g) = {e(g,g)}^{P(0)}$.
+\end{enumerate}
+
+\section{Polynomial Commitment}
+
+A commitment scheme $C$ is a function (Computationaly easy to calculate) such
+that for every value $v$, the corresponding commitment is $C(v)$. Given a
+commitment $C(v)$ it is computationaly hard to generate a different value $u
+\neq v$ such that $C(u) = C(v)$.
+
+Given a polynomial (Or any long array), we would like to be able to commit to
+the polynomial in an efficient way. We could for example use a known hash
+function to hash all the coefficients of the polynomial (Or maybe all the powers
+of $g$ to the coefficients: $Hash(g^{x_j})$ for every node $P_j$). That will
+work, however the size of the commitment will be linear in the size of the
+polynomial. We would like to obtain a less space consuming signature.
+
+We propose the following way \{TODO: Based on the article of Commitment to a
+polynomial by Kate\}: We use Pairing Based Cryptography. As before, we assume
+the existence of a group $G$, and a symmetric pairing map $e:G^2 \to \tilde{G}$.
+We also assume that there is a known generator $g$ of the group $G$, and some
+unknown $\alpha \in G$, which is also a generator of $G$. The values
+$g^{\alpha}, g^{{\alpha}^2},...g^{{\alpha}^q}$ are known.
+
+In order to have such $\alpha$ we could hard code a few pre-chosen $\alpha$-s.
+For each one of them a different number of exponents of the form
+$g^{{\alpha}^k}$ will be publicly known. Hence when a some size of polynomial is
+needed, we pick the relevant $\alpha$ with the closest polynomial size.
+
+\uline{Commitment to a polynomial $P$}
+\begin{itemize}
+  \item Assume $P(y) = a_0 + {a_1}y + ... + {a_q}y^q$. Given the known values of
+    the form $g^{{\alpha}^k}$ we can calculate the value $g^{P(\alpha)}$. That
+    is the commitment to the polynomial $P$.
+
+  \item Given a value $z$, in order to prove that $P(z) = r$, we calculate the
+    following polynomial: $Q_z(\alpha) = \frac{P(\alpha) - P(z)}{\alpha - z}$.
+    Note that this must be a polynomial because $(\alpha - z) | (P(\alpha) -
+    P(z))$. This could be seen as polynomial in $\alpha$ of degree less than
+    $q$, hence we should be able to calculate $g^{Q_z(\alpha)}$ using the known
+    exponentiation values of $\alpha$. The value $g^{Q_z(\alpha)}$ proves that
+    $P(z) = r$.
+
+  \item To check that $P(z) = r$ using the proof $g^{Q_z(\alpha)}$ and the
+    commitment $g^P(\alpha)$, one has to check the following:
+    $e(g,g^{P(\alpha)}) = e(g^{\frac{P(\alpha) - P(z)}{\alpha - z}},g^{\alpha} /
+    g^z) \cdot e(g,g^{P(z)})$.
+
+\end{itemize}
+
+The advantage of this polynomial commitment scheme is the small size of the
+commitment: Only the size of one element. Also given a signature over the
+commitment of the polynomial, the committer can expose only part of the
+polynomial: only some value $P(z)$.
+
+The main disadvantage is the requirement to have a few different hardcoded
+$\alpha$ values. We might be able to find another efficient way to commit to
+polynomials without the limitation of some predefined unknown $\alpha \in G$.
+
+Also note that the participant who commits to the polynomial might choose any
+polynomial with degree less or equal to $q$, where $q$ is the largest known
+value of the form $g^{{\alpha}^q}$.
+
+\part{Asynchronous protocols}
+\section{The asynchronous environment}
+Talks about the asynchronous environment.
+
+\section{C-Cast}
+
+\{TODO: This protocol shows up in Cachin and Shoup's articles. I don't know
+where it first appeared\}
+C-Cast (A shorthand for Consistent Broadcast) is a broadcast protocol with the
+following properties:
+\begin{itemize}
+  \item If a correct node has initiated the C-Cast protocol, then every correct
+    node eventually receives a message.
+  \item If two correct nodes $P_i,P_j$ have received messages $m_i,m_j$
+    respectively, then $m_i = m_j$.
+\end{itemize}
+
+Example for implementation is as follows:
+
+\uline{Sender of a message $m$}
+\begin{enumerate}
+  \item Send to all nodes (`initial',$m$).
+  \item Wait for $n-t$ valid signatures over (`mess',$m$). Combine the
+    signatures into one small signature (See for example the Multi Signature
+    scheme or Threshold Signature scheme) $s$. Send to all nodes
+    (`mess',$m$,$s$).
+\end{enumerate}
+
+\uline{Receiver $P_j$}
+\begin{enumerate}
+  \item Upon receiving an (`initial',$m$) message from the sender: Generate a
+    signature $s_j$ over (`mess',$m$), and send back to the sender:
+    (`sig',$s_j$).
+  \item Upon receiving a (`mess',$m$,$s$) message with a valid signature $s$,
+    where $s$ is a combined signature of at least $n-t$ nodes: Receive the
+    message $m$.
+\end{enumerate}
+
+Remarks:
+\begin{enumerate}
+  \item The network complexity of this scheme for a message of size
+    $m$ is $O(m \cdot n)$.
+  \item It might be true that part of the correct nodes will terminate the
+    protocol, however some correct nodes will never terminate it. That might
+    happen if a corrupt node doesn't send the final `mess' message to all the
+    correct nodes. However, this protocol maintains consistency: If one correct
+    node has received a message $m$, then every other correct node that receives
+    a message must receive the same message $m$.
+  \item Given that some correct node $P_w$ has not received the final `mess'
+    message, if it receives such a message it can know that this message is
+    valid, and is an actual proof of a completed C-Cast protocol.
+\end{enumerate}
+
+\section{Economic A-cast}
+
+The usual A-cast by Gabriel Bracha takes $O(m\cdot n^2)$ network complexity to
+send one message of size $m$. We will not state the A-cast protocol here, though
+we remind the reader the following properties of the A-cast protocol:
+\begin{itemize}
+  \item If two correct nodes $P_i,P_j$ have received messages $m_i,m_j$
+    respectively, then $m_i = m_j$.
+  \item If a correct node has initiated the A-cast, then every node eventually
+    receives a message.
+  \item If a correct node $P_i$ has terminated the protocol, then eventually any
+    other correct node will terminate the protocol.
+\end{itemize}
+Note that this protocol's requirements are stronger than the requirements
+for the C-Cast protocol.
+
+We would like to acheive an A-cast protocol with lower network complexity. The
+Economic A-cast acheives network complexity of about $O(n^2 + nm)$.
+
+Example for implementation of Economic A-cast (E-cast):
+
+\uline{Sender of a message $m$}
+\begin{enumerate}
+  \item Divide the message $m$ into coefficients of a polynomial $P$. (If
+    needed, it could be divided into a few polynomials). We now assume that the
+    polynomial $P$ stores the message $m$.
+  \item Create a commitment $C$ for the polynomial $P$.
+  \item Invoke C-Cast(`msg-commit',$C$). Keep the multi signature over the
+    `msg-commit' message as $s$.
+  \item Send every node $P_j$ the message (`msg-share',$C$,$s$,$P(k_j)$,$r_j$),
+    where $r_j$ is a proof for the value $P(k_j)$ corresponding to the
+    commitment $C$. (See the section about Polynomial commitment for more
+    information). Note that more than one value of the polynomial $P$ might be
+    needed (To make sure the polynomial will be reconstructible).
+\end{enumerate}
+
+\uline{Receiver $P_j$}
+\begin{enumerate}
+  \item Participate in the `msg-commit' C-Cast.
+  \item Upon receiving a (`msg-share',$C$,$s$,$P(k_j)$,$r_j$) message with valid
+    signature $s$, and a valid proof $r_j$ for the value $P(k_j)$: Assume the
+    receival of an `initial' message in an A-cast protocol (See Gabriel Bracha's
+    A-cast protocol), though forward only the values $C$,$s$.
+  \item Upon Accepting an A-cast message, send all nodes my shares of the
+    polynomials with their proofs. For example: ($P(k_j)$,$r_j$).
+  \item Wait for enough valid shares of the polynomial (Check every share with
+    his proof against the polynomial commitment), and reconstruct the
+    polynomial. Accept the message represented by the polynomial.
+\end{enumerate}
+
+Some remarks:
+\begin{enumerate}
+  \item Using our current polynomial commitment scheme (See the Polynomial
+    Commitment section) we can only have some pre determined sizes of
+    polynomials. Hence here we should choose a minimal polynomial with degree
+    larger than the size of the message. 
+
+  \item The number of values of the polynomial that needs to be sent to every
+    node is related to the possible degree of the polynomial. Assuming that
+    the A-cast was terminated, at least $n-2t$ correct nodes have received their
+    polynomial shares. If the polynomial is of degree $d$, then every correct
+    node should have about $\frac{d}{n-2t}$ values of the polynomial.
+
+  \item Given a large message, we could use a few polynomials instead of one.
+    (We might want to do that because we might be limited by the possible
+    polynomial size with the schema proposed in the Polynomial Commitment
+    section).
+\end{enumerate}
+
+\section{Binary Byzantine Agreement}
+
+\{TODO: The idea for the following protocol was taken from Victor Shoup's
+article Random Oracles in Constantinople: Practical Asynchronous Byzantine
+Agreement using Cryptography\}
+
+\subsection{Early set up}
+In order to create an efficient Binary Byzantine Agreement we rely on a
+cryptographic primitive called Threshold Signature. We assume that two threshold
+signatures schemes were set before the execution of the Binary Byzantine
+Agreement protocol: 
+\begin{itemize}
+  \item $\mathcal{S}_0$ is an $(n,t+1)$ threshold signature scheme.
+  \item $\mathcal{S}$ is an $(n,n-t)$ threshold signature scheme.
+  \item $\mathcal{C}$ is an $(n,n-t)$ threshold signature scheme that will be
+    used to produce a common coin. Thus we assume that its result is being
+    projected into the set $\{0,1\}$ in some way. (For example, applying some
+    hash function and then taking the bit parity of the result).
+\end{itemize}
+We assume that the corresponding secrets were distributed earlier between
+all the nodes.
+
+
+\subsection{BA Protocol}
+
+\begin{algorithm}
+\caption{Binary Byzantine Agreement}
+  \uline{Node $P_i$ with input $x_i \in \{0,1\}$}
+  \begin{enumerate}
+
+    \item \textbf{Pre-Processing:} 
+      \begin{itemize}
+        \item Set $is\_exit := False$. 
+        \item Generate an $\mathcal{S}_0$ signature share ${psh}_i$ on the
+          message (``pre-process'',$x_i$).
+        \item Send to all nodes: (``pre-process'',$x_i$,${psh}_i$) 
+      \end{itemize}
+    \item \label{ba-collect-pre-process}
+      Collect $n-t$ valid ``pre-process'' messages.
+    \item Repeat for rounds $r=1,2,3,...$:
+      \begin{enumerate}
+        \item \textbf{Pre-Vote and Common Coin:} 
+          \begin{itemize}
+            \item If $r=1$, let $b_1$ be the majority of the received
+              ``pre-process'' votes. \{TODO: What if there is no majority? What
+              to do if the number of ones equals the number of zeroes?\}
+              Define the following two blobs: ${blb}_r^0 :=$
+              (``if'',$0$,$b_1$,$r=1$), ${blb}_r^1 =$ (``if'',$1$,$b_1$,$r=1$).
+              and denote ${csh}_1 := None$. Produce a justification ${pj}_r$
+              which is an $\mathcal{S}_0$-signature of $t+1$ ``pre-process''
+              signature shares combined.
+
+            \item Else if $r > 1$, select $n-t$ properly justified main-votes
+              from round $r-1$. 
+              \begin{itemize}
+                \item If there is a main-vote for some $z \in \{0,1\}$ [Hard
+                  pre-vote] then define: ${blb}_r^0 :=$
+                  (``if'',$0$,$z$,$r$) and ${blb}_r^1 := $ (``if'',$1$,$z$,$r$).
+                  Produce a justification ${pj}_r$ which is a ``main-vote''
+                  message with the value $z$.
+
+                \item If all the main-votes we have are of value $\Lambda$ [Soft
+                  pre-vote], then define: ${blb}_r^0 :=$
+                  (``if'',$0$,$0$,$r$), and ${blb}_r^1 :=$ (``if'',$1$,$1$,$r$).
+                  Produce a justification ${pj}_r$ which is a combination of
+                  $n-t$ ``main-votes'' $\mathcal{S}$-signature shares with value
+                  $\Lambda$.
+              \end{itemize}
+              Generate a coin share ${csh}_r$ by creating a
+              $\mathcal{C}$-signature share over ($r$).
+          \end{itemize}
+
+          Produce $\mathcal{S}$-signature shares ${pvsh}_r^0,{pvsh}_r^1$ for
+          ${blb}_r^0,{blb}_r^1$ respectively.
+
+          Send to all nodes:
+          (``pre-vote'',$r$, ${pj}_r$, $blb_r^0$, ${pvsh}_r^0$,
+          ${blb}_r^1$, ${pvsh}_r^1$, ${csh}_r$).
+
+        \item \textbf{Main-Vote:}
+          Collect $n-t$ valid justified round-$r$ ``pre-vote'' messages. Combine
+          $n-t$ valid coin shares to get the value $c := {cc}_r \in \{0,1\}$.
+          Knowing the value of the coin, we can deduce the pre-vote of every
+          node. (For $r=1$ there is no coin and we may assume $c := 0$ for
+          example).
+          \begin{equation*}
+            v_r =
+            \begin{cases}
+              0 & \text{if there are } n-t \text{ pre-votes for } 0, \\
+              1 & \text{if there are } n-t \text{ pre-votes for } 1, \\
+              \Lambda & \text{if there are pre-votes for } 0 \text{ and } 1.
+            \end{cases}
+          \end{equation*}
+          Produce an $\mathcal{S}$-signature share ${mvsh}_r$ on the message
+          (``main-vote'',$r$,$v_r$) and produce a justification ${mj}_r$. If
+          there are $n-t$ pre-votes of value $w$ then combine all the
+          ${pvsh}_r^c$ shares with value $w$ into a $\mathcal{S}$-signature to
+          obtain justification. If there are pre-votes both for $0$ and $1$,
+          then obtain the justification by concatenating the two conflicting
+          ``pre-votes''.
+
+          Send to all nodes: (``main-vote'',$r$,$v_r$,${mj}_r$,${mvsh}_r$).
+
+        \item If $is\_exit = True$ then break from repeat loop.
+
+        \item \textbf{Check for decision:} Collect $n-t$ valid justified
+          round-$r$ ``main-vote'' messages. If all of these message vote for the
+          same value $q \in \{0,1\}$, then:
+          \begin{enumerate}
+            \item Create a justification ${dj}_q$ by combining all the signature
+              shares over the ``main-vote'' messages into one
+              $\mathcal{S}$-signature. 
+            \item Send to all nodes (``Decision'',$r$,$q$,${dj}_q$).
+            \item Set $is\_exit := True$.
+          \end{enumerate}
+
+      \end{enumerate}
+      \item \textbf{Termination:} On the receival of $t+1$ valid
+        (``Decision'',$r$,$q$,$m_q$,$s_q$) messages of value $q$:
+        \textbf{Terminate} with the value $q$.
+    \end{enumerate}
+\end{algorithm}
+
+The protocol is introduced here. Some Further explanation is added here.
+
+\textbf{Avoiding Replay attacks:} We should make sure that the common coin
+mechanism and the rest of the Threshold Signatures are not exposed to replay
+attacks (That means that someone sees once how the signature looks like, and
+uses that knowledge later to cheat). Every instance of the protocol should have
+a unique serial number. In addition, we could use the current list of nodes in
+the protocol, and maybe some other random objects generated earlier. Together we
+obtain some random buffer which is consistent between all the participating
+nodes, and that buffer is implicitly concatenated to every data that is signed.
+
+For example: When generating a share for the common coin, instead of just
+signing over ($r$), we actually sign over (random-buffer,$r$).
+
+\textbf{Justifications:} Most messages sent in the protocol have a justification
+attached to them. For every message sent we explain in the protocol description
+how to generate the required justification. Whenever a correct node receives one
+of those messages, it makes sure that the justification is correct, and only
+then it may accept the message. That is what we mean when we write "justified
+message" in the protocol description.
+
+\textbf{The ``if'' conditional}
+In order to save some network complexity and latency, we insert some kind of
+``if'' clauses inside the ``pre-vote'' messages. We do that instead of dealing
+with sending the coin shares in a separate stage. The blob
+(``if'',$0$,$b_1$,$r=1$) should be read as follows: If the coin of round $r=1$
+has value $0$ then I pick the value $b_1$ for the pre-vote of round $1$.
+
+There are two kinds of justifications for a ``pre-vote'' message. The first one
+is called Hard, and it happens when a node has received some main-vote with a
+real value $q \neq \Lambda$. The correct node will use that main-vote message
+as a justification to for a ``pre-vote''. That ``pre-vote'' message will
+contain the following conditionals: If the coin's value is $0$, I pick $q$. If
+the coin's value is $1$, I pick $q$.
+
+The second justification for a ``pre-vote'' message is called Soft. It happens
+when a vote has received only main votes with null value $\Lambda$. It then
+combines all the $\mathcal{S}$-signature shares signing the $\Lambda$ value into
+a justification. In this case the correct node doesn't know which value to pick,
+and thus it will pick the coin's value. Hence the ``pre-vote'' message will
+contain the following conditionals: If the coin value is $0$, I pick $0$. If the
+coin value is $1$, I pick $1$.
+
+In the Main-Vote stage, every correct node collects $n-t$ valid justified
+``pre-vote'' messages. It can know the coin value from the shares in those
+messages. Then according to the value of the coin it looks at the appropriate
+``if'' clauses. It can then combine $n-t$ $\mathcal{S}$-signature shares of
+different nodes, regardless whether the nodes had Soft or Hard justifications.
+(The big idea here is that Soft and Hard type ``if'' clauses signature shares
+can be combined together. We get that at the network expense of sending two
+clauses).
+
+% Validity property of BA:
+\begin{lem}
+  If all the correct nodes begin the protocol with input $y$, then all the
+  correct nodes terminate the protocol with the result $y$.
+\end{lem}
+\begin{proof}
+  Given that all the correct nodes begin the protocol with input $y$, Every
+  correct node will send the value $y$ as its ``pre-process'' message, with a
+  valid signature share. In step \ref{ba-collect-pre-process} every correct node
+  collects $n-t$ valid ``pre-process'' messages. Hence at least $(n-t) + (n-t)
+  - n = n-2t$ out of those messages are from correct nodes. We want to make sure
+  that $n-2t$ is more than $\frac{1}{2}(n-t)$. That is iff $2(n-2t) > n-t$, iff
+  $n > 3t$ which is true. Hence more than half of the messages are from correct
+  nodes.
+
+  Thus in round $r=1$ at the Pre-Vote stage every correct node will get that
+  $b_1 = y$, and ${blb}_r^0 =$ (``if'',$0$,$y$,$r=1$), ${blb}_r^1 =$
+  (``if'',$1$,$y$,$r=1$). Eventually it sends a valid justified ``pre-vote''
+  message with those blobs.
+
+  Then in the Main-Vote stage of round $r=1$ every correct node collects $n-t$
+  valid justified round $r=1$ ``pre-vote'' messages. It is also assumed that
+  $c=0$ because $r=1$. (That means that we can consider only $if$ blobs that
+  begin with $0$, for example). 
+  
+  As there are $n$ nodes, and $n-t$ out of those signed ``pre-process'' messages
+  with the value of $y$, there are no more than $t$ ``pre-process'' messages
+  with the opposite value $\bar{y}$, which means that there are no more than $t$
+  $\mathcal{S}_0$-signature shares over ``pre-process'' messages with the
+  oppositve value $\bar{y}$. Therefore the adversary can not obtain an
+  $\mathcal{S}_0$-signature over a ``pre-process'' message with the value
+  $\bar{y}$. Thus it can not create a justification for a ``pre-vote'' message
+  with value $\bar{y}$.
+  
+  Hence for every correct node, every valid justified ``pre-vote'' message
+  received at the Main-Vote stage is of value $y$. More specifically: It
+  can only contain two blobs of the form (``if'',$0$,$y$,$r=1$) and
+  (``if'',$1$,$y$,$r=1$). Thus $v_r = y$ for every correct node. The
+  justification for the ``main-vote'' message to be sent can be created by
+  combining the $n-t$ collected $\mathcal{S}_0$-signature shares over blobs of
+  the form (``if'',$0$,$y$,$r=1$). Eventually every correct node sends a valid
+  justified ``main-vote'' message with value $y$.
+
+  Note that as there are only signed blobs of the form (``if'',*,$y$,$r=1$), and
+  the value of the coin is considered to be $0$ in the first round, the
+  adversary can only produce valid justified ``main-vote'' message with value
+  $y$.
+
+  Thus at the Check For Decision stage every correct node collects $n-t$
+  valid justified ``main-vote'' of value $y$. It then combines all the signature
+  shares of those messages into a justification ${dj}_y$, and sends a
+  valid justified ``Decision'' message to all nodes, with value $y$.
+
+  Every correct node then receives $t+1$ messages of value $y$, and it
+  terminates with the value $y$. 
+\end{proof}
+
+\begin{defn}
+  We denote by $E_r^q$ (for $q \in \{0,1\}$) the following event \footnote{One
+    could consider this event being tracked by an imaginary special node that
+  proxies all the lines of communications.}: At least
+  $n-2t$ correct nodes sent $r$-round valid justified pre-votes with value $q$
+  \footnote{To be more specific: the value became $q$ after the value of the
+  coin was revealed.} 
+
+  Note that the events $E_r^0$ and $E_r^1$ may only be considered after enough
+  pre-votes were sent by correct nodes in the $r$ round.
+\end{defn}
+
+\begin{lem}
+  It is not possible that both $E_r^0$ and $E_r^1$ occur.
+\end{lem}
+\begin{proof}
+  There are only $n-t$ correct nodes, and every correct node sends only one
+  $r$-round valid justified pre-vote (With only one value). Hence as $(n-2t) +
+  (n-2t) = 2n - 4t$ is larger than $n-t$, the number of correct nodes, because
+  $n > 3t + 1$. Thus it must be true that only one of $E_r^0$ and $E_r^1$
+  occurs.
+\end{proof}
+
+% Helper lemma:
+\begin{lem}
+  \label{lem-ba-prop}
+  Assuming the hardness properties of the Threshold Signature scheme, For $r
+  \geq 1$, the following holds:
+  \begin{enumerate}
+    \item If a node has a valid justified main-vote of value $q \in
+      \{0,1\}$ in round $r$, then $E_r^q$.
+    \item If a node has a valid justified Hard pre-vote with value
+      $q \in \{0,1\}$ in round $r+1$, then $E_r^q$.
+    \item If a node has a valid justified $(r+1)$-round main-vote of value
+      $\Lambda$ then $E_r^{\bar{c}}$, where $c = {cc}_{r+1}$ is the coin's value
+      in round $r+1$.
+  \end{enumerate}
+\end{lem}
+\begin{proof}
+  % Proof of the first part:
+  Assume that a node $P_w$ has a valid justified main-vote of value
+  $q \in \{0,1\}$ in round $r$. The justification for this main-vote message is
+  an $\mathcal{S}$-signature over a pre-vote for value $q$. By the hardness
+  assumption over the Threshold Signature scheme at least $n-t$ shares were
+  required to generate this signature. $t$ out of those shares could be
+  generated by the adversary, and the other $n-t-t = n-2t$ were generated by
+  correct $n-2t$ different correct nodes. Hence at least $n-2t$ correct nodes
+  have sent $r$-round valid and justified pre-vote message with value $q$. It
+  follows that $E_r^q$ occured.
+
+  % Proof of the second part:
+  Assume that some node $P_i$ has a valid justified Hard pre-vote
+  with value $q \in \{0,1\}$ in round $r+1$. This means that the pre-vote is
+  justified by a justified round-$r$ main-vote with value $q$. Hence $P_i$ has a
+  valid justified round-$r$ main-vote with value $q \in \{0,1\}$. By the first
+  part it follows that $E_r^q$ occured.
+
+  % TODO: Are all the indexes right here?  Should it actually be E_r and not
+  % E_(r+1)? Check it out.
+
+  % Proof of the third part:
+  % Note that the indices here are a bit different from Victor Shoup's article
+  % "Random Oracles in consantinople", because I used the optimization proposed
+  % in there to combine the common coin stage with the pre-vote stage. As they
+  % are done in the same time, we do not need to refer to the old coin of round
+  % $r$, but to use the coin of the current round: $r+1$.
+
+  Assume that some node $P_i$ has a valid justified $(r+1)$-round main-vote of
+  value $\Lambda$. The justification for this message consists of two
+  conflicting valid and justified $r+1$-round pre-vote messages. It can not be
+  true that both of those conflicting pre-votes are Soft, because then they
+  won't be conflicting. (Both will have the value ${cc}_{r+1}$). 
+
+  Also note that it is not possible that both of those conflicting pre-votes are
+  Hard. If it is true, then by the second part of this lemma both $E_r^0$ and
+  $E_r^1$ occured, which is a contradiction. 
+
+  Hence one of the pre-votes is Hard, and the other one is Soft. The Soft
+  pre-vote has the value of the coin ${cc}_{r+1}$. Therefore the Hard pre-vote
+  has the opposite value. Denoting $c := {cc}_{r+1}$, we get $\bar{c} =
+  \bar{{cc}_{r+1}}$. That means that the node $P_i$ has a valid justified Hard
+  pre-vote with value $\bar{c}$. By the second part of this lemma, we get that
+  $E_r^{\bar{c}}$ occured.
+\end{proof}
+
+% The decision shift lemma: All the correct nodes decide in two adjacent rounds
+% $r$ and $r+1$.
+\begin{lem}
+  \label{lem-decision-shift}
+  Assume that a valid justified ``Decision'' message with value $q$ and round
+  $r$ was sent \footnote{One could think of it as received by a special node
+  that proxies all lines of communication}. 
+  
+  Then the following statements hold:
+  \begin{enumerate}
+    \item For any valid justified ``Decision'' message that was sent by a
+      correct node with value $x$ and round $y$, it holds that $x$ = $q$ and
+      $|y - r| \leq 1$. 
+    \item Let $P_i$ be a correct node. Then $P_i$ will eventually send a
+      ``Decision'' message.
+  \end{enumerate}
+\end{lem}
+\begin{proof}
+   % In round $r$ only ``main-vote'' messages with value $q$ or $\Lambda$ are
+   % possible to have.
+   Assume that a valid justified ``Decision'' message with value $q \in \{0,1\}$
+   and round $r$ was sent. Thus it must contain an $\mathcal{S}$-signature over
+   a $r$-round $q$ valued main-vote. In order to obtain such a signature, $n-t$
+   shares are needed. $t$ shares could be obtained by the adversary. The rest of
+   the shares could only be obtained from $r$-round $q$ valued ``main-vote''
+   messages sent by $n-t-t=n-2t$ correct nodes.
+   
+   By the first part of Lemma \ref{lem-ba-prop}, $E_r^q$ occured. If any other
+   node has a valid justified round-$r$ ``main-vote'' message with value
+   $\bar{q}$, then $E_r^{\bar{q}}$ occured, which is a contradiction. Hence in
+   round $r$ every correct node has only ``main-vote'' messages with value
+   $q$ or $\Lambda$ in its $n-t$ main-votes collection.
+
+   % If some node sends a justified ``Decision'' message in round $r$, it must be
+   % of value $q$:
+   Assume a valid justified ``Decision'' message with round $r$ and value
+   $\bar{q}$ was sent. Then it must contain an $\mathcal{S}$-signature over a
+   $r$-round $\bar{q}$ valued main-vote. In order to create such a signature,
+   $n-t$ valid signature shares are needed. $t$ signature shares could be
+   supplied by the adversary. However, as there are no valid justified $r$-round
+   main-votes with value $\bar{q}$, no correct node will produce an
+   $\mathcal{S}$-signature share over such a main vote. Therefore such an
+   $\mathcal{S}$-signature could not be created, which is a contradiction.
+
+   Hence any valid justified ``Decision'' message with round $r$, must be with
+   value $q$.
+   
+   % Every correct node that didn't send a ``Decision'' message in round $r$ will
+   % send one in round $r+1$ with value $q$:
+   As there are at least $n-2t \geq t+1$ correct nodes who sent a valid justified
+   round-$r$ ``main-vote'' message with value $q$, in round $r+1$, every correct
+   node will eventually have at least one valid justified ``main-vote'' with
+   value $q$ in his collection (At the Pre-Vote stage). In addition, since there
+   are at least $t+1$ correct nodes who sent a round-$r$ ``main-vote'' message
+   with value $q \neq \Lambda$, there are less than $n-t$ $r$-round main-votes
+   with the value $\Lambda$. Therefore no node can create a justification for a
+   Soft pre-vote. That means nodes can only create a valid justified $r$-round
+   Hard pre-vote with value $q$.
+
+   Hence every correct node will send a Hard $(r+1)$-round pre-vote with value
+   $q$, and every correct node will have only pre-votes with value $q$ in his
+   collection at the Main-Vote stage. Hence every correct node will send an
+   $(r+1)$-round main-vote with value $q$. 
+   
+   Note that an $(r+1)$-round main-vote with value $\bar{q}$ or $\Lambda$ can not
+   be justified, as the only valid justified $(r+1)$-round pre-votes have value
+   $q \in \{0,1\}$. For every correct node that did not already send a
+   ``Decision'' message in round $r$, in the Check For Decision stage of round
+   $r+1$ it will have only $q$ value validated justified main-votes in his
+   collection. In addition, it must eventually receive at least $n-t$ main-votes
+   with value $q$ from correct nodes.
+   
+   Thus every correct node that didn't send a ``Decision'' message in round $r$
+   will send a ``Decision'' message in round $r+1$ with value $q$.
+\end{proof}
+
+% Agreement property of BA:
+\begin{lem}
+  If two correct nodes $P_i$ and $P_j$ terminate the protocol with results $y_i$
+  and $y_j$ respectively, then $y_i = y_j$.
+\end{lem}
+\begin{proof}
+  $P_i$ has terminated with result $y_i$. Therefore it must have recieved $t+1$
+  valid justified ``Decision'' messages with value $y_i$. In the same way, $P_j$
+  has received $t+1$ valid justified ``Decision'' messages with value $y_j$.
+  
+  There are only $t$ corrupt nodes, therefore at least one of the $t+1$ valid
+  justified ``Decision'' messages received by $P_j$ was sent by a correct node.
+  By lemma \ref{lem-decision-shift} it then holds that $y_j = y_i$.
+\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%[Proving Termination]%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{lem}
+  \label{lem-ba-e-before-coin}
+  For $r \geq 1$ one of the following must be true:
+  \begin{enumerate}
+    \item One of the events $E_r^0, E_r^1$ is determined before the coin value
+      ${cc}_{r+1}$ is known to the adversary
+    \item One of the events $E_{r+1}^0, E_{r+1}^1$ is determined before the coin
+      value ${cc}_{r+2}$ is known to the adversary.
+  \end{enumerate}
+\end{lem}
+\begin{proof}
+  $n-t$ valid coin shares are needed to determine the value of the coin of round
+  $r+1$. The adversary can create at most $t$ shares of the coin, and $n-t-t =
+  n-2t \geq t+1$ shares has to be created by correct nodes.
+
+  Let $\mathcal{Q}$ be the set of the first $n-2t$ correct nodes from which the
+  adversary receives $r+1$-round pre-votes. If any correct node $P_j \in
+  \mathcal{Q}$ sends a Hard pre-vote with value $q \in \{0,1\}$ in round $r+1$
+  then by Lemma \ref{lem-ba-prop} the event $E_r^q$ occurs. Also note that
+  $E_r^q$ occurs before the adversary knows the value of ${cc}_{r+1}$.
+
+  Otherwise, assume that all the correct nodes in $\mathcal{Q}$ sent a Soft
+  pre-vote. At the point in time where the last correct node in $\mathcal{Q}$
+  sent the Soft pre-vote, only $n-2t-1$ correct node have passed the Pre-Vote
+  and Common-Coin stage of round $r+1$. Hence the adversary can not yet know the
+  value ${cc}_{r+2}$. 
+  
+  The value of all the Soft pre-votes sent by correct nodes in $\mathcal{Q}$
+  will be the value of the coin ${cc}_{r+1}$. Thus there are $n-2t$ correct
+  nodes who sent pre-votes with the same value ${cc}_{r+1}$, and so
+  $E_{r+1}^{{cc}_{r+1}}$ occurs (By the definition of $E_{r}^q$). Note that here
+  the event $E_r^{{cc}_{r+1}}$ occurs before the adversary knows the value
+  ${cc}_{r+2}$.
+\end{proof}
+
+\begin{lem}
+  \label{lem-ba-term-by-coin}
+  For $r \geq 1$: If $G_r := E_r^{{cc}_{r+1}}$ occurs then every correct node
+  terminates in round $r+2$ or earlier.
+\end{lem}
+\begin{proof}
+  if $E_r^{{cc}_{r+1}}$ occurs, then by the third part of Lemma \ref{lem-ba-prop} it
+  must be true that any valid justified $(r+1)$-round main-vote is of value
+  different from $\Lambda$. By the first part of Lemma \ref{lem-ba-prop} there
+  can't be two $(r+1)$-round main-votes with conflicting values. Hence all the
+  $(r+1)$-round main-votes will have the same value $q \in \{0,1\}$. 
+  
+  Therefore all the correct nodes send a $(r+1)$-round main-vote with value $q$
+  in the Main-Vote stage. As no $(r+1)$-round main-votes with other values could
+  exist, every correct node (that doesn't terminate in round $r+1$) will collect
+  $n-t$ $(r+1)$-round main-votes of value $q$ in the Decision stage, and thus it
+  will send a ``Decision'' message with value $q$. It will then participate in
+  one more round, and eventually terminate.
+\end{proof}
+
+% Termination property of BA:
+% The following proof is not very formal. Maybe fix it later.
+\begin{lem}
+  The probability that a correct node $P_i$ will advance more than $2r+1$ rounds
+  is bounded by $(0.5 - \delta)^r$, where $\delta$ is small and depends on the
+  Threshold Signature mechanism.
+\end{lem}
+\begin{proof}
+  \{Note: This proof is not very formal. Maybe fix it later.\}
+  for every $i \leq r$, consider the round numbers $2i-1,2i$. by Lemma
+  \ref{lem-ba-e-before-coin} either one of $E_r^*$ is determined before the
+  adversary knows ${cc}_{r+1}$ or $E_{r+1}^*$ is determined before the adversary
+  knows ${cc}_{r+2}$.
+
+  By the hardness properties of the Threshold Signature mechanism, the coin's
+  values are unpredictible to the adversary. (Though the adversary might be able
+  to have some control over the events $E_{2i-1}^*,E_{2i}^*$.)
+  
+  Following Lemma \ref{lem-ba-e-before-coin} we get that some event
+  $E_{2i-1+g}^b$ is determined before the value ${cc}_{2i+g}$ is known to the
+  adversary, for some $g,b \in \{0,1\}$. By the properties of the Threshold
+  Signatures mechanism: $\Pr[{cc}_{2i+g} = b] = 0.5 + {\delta}$ for some
+  small ${\delta}$. Note that with the same probability we get that
+  $G_{2i-1+g}$ occurs, and by Lemma \ref{lem-ba-term-by-coin} that
+  means every correct node terminates in round $2i+g+1$ or earlier.
+
+  Therefore the probability that any correct node advances more than $2r + 1$
+  rounds is $(1 - (0.5 + \delta))^r$ = $(0.5 - \delta)^r$.
+\end{proof}
+
+
+\subsubsection{Binary BA Network Complexity}
+
+Here we calculate roughly the network complexity of a Binary Byzantine Agreement
+invocation. We assume $s$ to be the size of a small signature (For example BLS
+signature), and $b$ to be the overhead size for sending a message. In addition
+we mark by $p$ the size of a proof for a value.
+
+Note that we did not yet write about Validated Binary Byzantine Agreement, where
+a proof must be added for the value chosen. The proof should be sent in the
+Pre-Processing phase, together with the initial vote. 
+
+TODO: Maybe it is possible to make the proof be sent only in the pre-processing
+phase. Check it out later.
+
+% TODO: Write about Validated Binary Byzantine Agreement.
+\{TODO: Write about Validated Binary Byzantine Agreement.\}
+
+\begin{enumerate}
+  \item Pre-Processing: $n(n(b + s + p))$
+  \item Loop: (Happens some constant $C$ times).
+  \begin{enumerate}
+    \item Pre-Vote and Common Coin: $n(n(b + s + (n/8) + s + s + s + p))$
+    \item Main-Vote: $n(n(b + s + (n/8) + s + p))$.
+  \end{enumerate}
+  \item Decision: $n(n(b + s))$
+\end{enumerate}
+
+Total of $(bn^2 + sn^2 + pn^2) + 
+C((bn^2 + 4sn^2 + (n^3)/8 + pn^2) + (bn^2 +
+2sn^2 + (n^3)/8 + pn^2)) + (bn^2 + sn^2) = 
+2bn^2 + 2sn^2 + pn^2 + C(2bn^2 + 6sn^2 + (n^3)/4 + 2pn^2)$.
+
+For $C = 3$ we get: $2bn^2 + 2sn^2 + pn^2 + 6bn^2 + 18sn^2 + 3(n^3)/4 + 6pn^2 =
+8bn^2 + 20sn^2 + 7pn^2 + 3(n^3)/4$.
+
+\section{Multivalued Interactive Consistency}
+
+In our asynchronous byzantine setting we have $n$ nodes, out of which $t$ are
+corrupt. Every node has a message to send. We would like to get a list of $n-t$
+messages from $n-t$ nodes, such that every correct node sees exactly the same
+list.
+
+Note that those $n-t$ nodes must not be all correct. It is possible that $t$
+nodes out of those are corrupt.
+
+We show here an example for implementation:
+
+\uline{Node $P_j$ with message $m_j$}
+\begin{enumerate}
+  \item Generate proposal:
+  \begin{enumerate}
+    \item Invoke C-Cast(`int',$m_j$).
+    \item Participate in all `int' C-Casts.
+    \item Collect $n-t$ `int' C-Casts from other nodes.
+    \item Create a polynomial $Q_j$, where $Q_j(i)$ is a representation of the
+      proof of the C-Cast of message $m_i$. (Note that it might be needed to
+      have more than one entry to hold a represntation of this proof). Generate
+      a commitment $C_j$ to the polynomial. (See the Polynomial Commitment
+      section for more information).
+    \item Send (`share',$C_j$,$z_j$,$\{Q_j(y),s_y\}_{y \in Y_j}$) to every node,
+      where $s_y$ is a proof for the value $Q_j(y)$ corresponding to the
+      commitment $C_j$. $z_j$ is a bit mask representing the messages inside
+      the polynomial. there must be at least $n-t$ messages inside the
+      polynomial. Note that we send a few different values. The specific sent
+      values depend on the participant $P_j$ (They are determined in a pseudo
+      random manner by the value $j$ for example), and their amount is
+      determined according to the chosen size of the polynomial.
+    \item Sign any valid `share' messages. Send back to the sender of the
+      `share' messages a `sign' message of the form (`sign',$s_j$), where $s_j$
+      is a signature over (`commit',$w$,$C_w$,$z_w$) for example.
+    \item Collect $n-t$ signatures. Combine those into one signature. Let the
+      resulting signature be $V_j$.
+    \item Send (`propose',$C_j$,$z_j$,$V_j$) to all nodes.
+  \end{enumerate}
+  \item Pre-voting a proposal:
+  \begin{enumerate}
+    \item Wait for $n-t$ distinct `propose' messages. Keep them. Let $L_j$ be
+      the set of nodes who send those valid proposals. ($|L_j| = n-t$).
+    \item Invoke C-Cast(`v-commit',$L_j$) to all nodes. Note that this set could
+      be packed as a bit map. $1$ represents: node is inside set, and $0$
+      represents that a node is not inside the set.
+    \item Collect $n-t$ distinct sets $L_w$ from `v-commit' C-Casts. Note that a
+      valid `v-commit' message contains at least $(n-t)$ $1$-bits.
+    \item Generate a pseudo random share $r_j$ with a relevant proof $d_j$. Send
+      to all nodes: (`prand-share',$r_j$,$d_j$).
+    \item Wait for $n-t$ valid pseudo random shares. Combine them to get the
+      value $r$. Use that value to generate a pseudo random permutation $\Pi$.
+      Note: If needed, we might need to send more pseudo random shares to
+      generate some larger permutation.
+  \end{enumerate}
+  \item Voting a proposal:
+  \begin{enumerate}
+    \item Let $i = 1$.
+    \item Repeat:
+      \begin{enumerate}
+        \item Choose a random node from the permutation: $P_w := {\Pi}(i)$.
+        \item If $P_w \in L_j$ then send (`v-vote',$P_w$,$0$,None) to all nodes.
+          Else send (`v-vote',$P_w$,$1$,($C_w$,$z_w$,$V_w$)) to all nodes.
+        \item Wait for $n-t$ valid `v-vote' messages. A `v-vote' message
+          received from node $P_w$ is valid if a `v-commit' message was
+          previously sent from $P_w$, and it is consistent with the `v-vote'.
+          
+          If any of the valid accepted `v-vote' messages has value $1$ then set
+          $v := 1, p:= (C_w,z_w,V_w)$. Else set $v := 0, p:= None$.
+
+        \item Participate in a Binary Validated Byzantine Agreement Biased
+          towards $1$ with value $v$ and proof $p$. Wait for the agreement
+          protocol to decide.
+        \item If decided $0$, set $i := i + 1$. Continue to the next node in the
+          permutation.
+        \item If decided $1$:
+        \begin{enumerate}
+          \item send all known shares for the polynomial of $P_w$.
+          \item Wait for $n-t$ valid shares of the polynomial of $P_w$. Upon
+            receival of $n-t$ such valid shares, reconstruct the polynomial of
+            $P_w$. Call the polynomial $Q_w$.
+
+            If the polynomial $Q_w$ is invalid, remember the node $P_w$ as a
+            corrupt node. Set $i := i + 1$. Continue to the next node in the
+            permutation.
+
+            If the polynomial $Q_w$ is valid (All proofs of C-Casts inside the
+            polynomial are valid, and the proofs match the bit mask $z_w$) then
+            send any known shares of the C-Cast messages to all nodes, with
+            corresponding proofs. 
+            
+            \footnote{Note that if the messages are too small, we could not
+              divide those messages into smaller shares.  However we might be
+              able to send a share which is a linear combination of the known
+              messages for every node. I haven't yet come out with such a code,
+            though I believe it is possible.}
+          \item Collect $n-2t$ shares of any message included inside the
+            polynomial $Q_w$, and reconstruct all the messages.
+        \end{enumerate}
+      \end{enumerate}
+  \end{enumerate}
+\end{enumerate}
+
+Remarks:
+\begin{enumerate}
+  \item Approximate network complexity for the above protocol, assuming that all
+    the messages are of size $m$, where $m$ is large (So there is meaning to
+    split it to shares. If $m$ is not very large, we might prefer to send a
+    whole message instead of splitting it over a polynomial).
+
+    In addition we consider $b$ to be a basic overhead of sending a message in
+    the network and $s$ to be a size of a short signature (Like a BLS
+    signature).
+  \begin{enumerate}
+    \item Generate proposal: 
+    \begin{enumerate}
+      \item C-Cast of $m_j$: $n(n(b + m) + n(b + s) + n(b + s + (n/8))) =
+        {n^2}(b + m + b + s + b + s + (n/8)) = 3bn^2 + 3sn^2 + mn^2 +
+        (n^3)/8$.
+      \item Sending `share' messages : $n(n(b + s + n/8 + D(s + s)))$, where $D$
+        is some small constant (The number of samples from the polynomial).
+      \item Sending `sign' messages: $n(n(b + s))$
+      \item Sending `propose' messages: $n(n(b + s + (n/8) + s)$.
+    \end{enumerate}
+    \item Pre-voting a proposal:
+    \begin{enumerate}
+      \item Sending `v-commit' messages: $n(n(b + n/8))$.
+      \item Sending `prand-share' messages: $n(n(b + s))$.
+    \end{enumerate}
+    \item Voting a proposal:
+    \begin{enumerate}
+      \item Sending `v-vote' messages: $n(n(b + s + (n/8) + s))$.
+      \item Validated Binary Byzantine Agreement: $8bn^2 + 20sn^2 + 7pn^2 +
+        3(n^3)/4$, where $p = s + n/8 + s$ is the size of proof for the
+        Validated Byzantine Agreement. That means: $8bn^2 + 20sn^2 + 3(n^3)/4 +
+        7(2s + n/8)n^2 = 8bn^2 + 20sn^2 + 3(n^3)/4 + 14sn^2 + (n^3)/8 = 8bn^2 +
+        34sn^2 + (7/8)(n^3)$.
+      \item Sending known shares for the polynomial of $P_w$: $n(n(b + Ds))$.
+      \item Sending known shares of messages: $n(n(b + n(max(\frac{m}{t},s))))$.
+    \end{enumerate}
+  \end{enumerate}
+  Assuming $D=3$ and $\frac{m}{t} > s$ (messages are large), we get a total of:
+  $[3bn^2 + 3sn^2 + mn^2 + (n^3)/8] + [{n^2}(b + 7s + n/8)] + [bn^2 + sn^2] +
+  [2sn^2 + bn^2 + (n^3)/8] + [bn^2 + (n^3)/8] + [bn^2 + sn^2] + [bn^2 + 2sn^2 +
+  (n^3)/8] + [8bn^2 + 34sn^2 + (7/8)n^3] + [bn^2 + 3sn^3] + [bn^2 + (mn^3)/t] =
+  [{bn^2}(3 + 1 + 1 + 1 + 1 + 1 + 1) + {sn^2}(3 + 7 + 1 + 2 + 1 + 2 + 34 + 3) +
+    {(n^3)/8}(1 + 1 + 1 + 7) + mn^2 + (mn^3)/t \approx 9bn^2 + 53sn^2 +
+    (10/8){n^3} + mn^2 + 3(mn^2) = 9bn^2 + 53sn^2 + (10/8){n^3} + 4mn^2$
+
+  Assuming $D=3$ and $\frac{m}{t} \leq s$ (messages are small), we get about
+  $9bn^2 + 53sn^2 + (10/8){n^3} + mn^2 + sn^3$. \footnote{As noted, we might get
+    a better result if we manage to find a code that deals with distributing the
+    small messages.}
+\end{enumerate}
+
+\section{Keys distribution for Unpredictable pseudo random scheme}
+
+We make use of the Common Coin and Unpredictable pseudo random in the Byzantine
+Agreement and Interactive Consistency schemes. We earlier assumed a setup of
+keys distributed between all the participants. We show here how to distribute
+the keys.
+
+The key distribution protocols introduced here should be used whenever nodes
+join or leave the supernode, because the Unpredictable pseudo random scheme is
+a threshold signature, and its function depends on the number of nodes in the
+supernode. (We always assume that there are about $\frac{n-1}{3}$ corrupt nodes
+in the supernode in all of our protocols).
+
+We will make use of the PVSS scheme introduced earlier to deal the keys. Hence
+we assume the existence of public and private keys as in the PVSS setting.
+
+The Key Distribution protocol is as follows:
+
+\uline{Node $P_i$}
+\begin{enumerate}
+  \item Generate a random polynomial, and generate a public message as in the
+    PVSS primitive corresponding to this polynomial. Let $m_i$ be that message.
+  \item \textbf{Commitment:} Calculate $r_i := Hash(m_i)$. Invoke
+    Interactive-Consistency($r_i$).  Wait for the completion of the
+    Interactive-Consistency invocation. Let $L$ be the set of $n-t$ nodes which
+    their values where chosen in the Interactive-Consistency protocol.
+  \item \textbf{Reveal:} Invoke Interactive-Consistency($m_i$) with validation.
+    (We check for every proposal that it is a valid secret sharing, and that it
+    matches the hash from the previous invocation). Wait for the completion of
+    the Interactive-Consistency invocation. Let $T$ be the set of $n-t$ nodes
+    which their values where chosen in the Interactive-Consistency protocol.
+    Denote $Z := L \cap T$. $|Z| \geq t+1$.
+  \item For every $m_w$, a message accepted for $P_w \in Z$, let $Y_i^w$ be the
+    value be encrypted share of $P_i$. Calculate $Y_i := {\prod}_{w \in
+    Z}{Y_i^w}$. In addition calculate $C_i := {\prod}_{w \in Z}{C_i^w}$.
+\end{enumerate}
+
+Remarks:
+\begin{enumerate}
+  \item Getting a common value for some message $M$ is as documented in the PVSS
+    section.
+  \item This protocol actually takes the polynomials shared by $t+1$ different
+    nodes and adds them into one polynomial. As at least $1$ node out of those
+    $t+1$ nodes is a correct node, the adversary can not know the shared secret.
+  \item The commitment phase it important. Note that it is not required to make
+    sure that the final shared value is secret. However, it does make sure the
+    adversary doesn't have control over the distribution of the public keys, for
+    example.
+  \item Network Complexity for the Key Distribution protocol:
+    \begin{enumerate}
+      \item Commitment: Interactive-Consistency with message of size about $m =
+        s$: We get about $9bn^2 + 53sn^2 + (10/8){n^3} + sn^2 + sn^3 = 9bn^2 +
+        54sn^2 + (10/8){n^3} + sn^3$.
+      \item Reveal: Interactive-Consistency with message of size about $m =
+        2sn$: We get about $9bn^2 + 53sn^2 + (10/8){n^3} + 4(2sn)n^2 = 9bn^2 +
+        53sn^2 + (10/8){n^3} + 8sn^3$ network complexity.
+    \end{enumerate}
+    A total of $18bn^2 + 107sn^2 + (20/8){n^3} + 9sn^3$ network complexity.
+\end{enumerate}
+
+\part{Supernode}
+
+\section{Atomic Events}
+
+\subsection{Motivation}
+
+We would like to manage to nodes in the supernode like we manage one machine. We
+would also eventually like to write code for it like it is one simple node
+inside a DHT, for example.
+
+The main challenge in acheiving this kind of synchronity is having some agreed
+upon order over the incoming events. Example for events:
+\begin{itemize}
+  \item The receival of incoming messages: Usually every node receives incoming
+    messages in different order. Two different nodes might receive two messages
+    in different order, and therefore become inconsistent with each other. We
+    would like to make sure that before acting upon any incoming message, we are
+    sure that all the nodes are going toe have the incoming messages in the same
+    order.
+
+  \item Decision to remove a node from the supernode or add a node to the
+    supernode.
+
+  \item Timing events. Some nodes might believe that some time has passed since
+    some event, however other nodes might not believe so. Hence an event about
+    the time passing should only be added to the list of ordered events after
+    enough nodes agree upon it.
+\end{itemize}
+
+\subsection{Main idea for implementation}
+
+We will implement the Atomic Events mechanism as follows: We define a validation
+function for events. Different kind of events will be validated in different
+ways. For example, an event about time passing might need to be signed by at
+least $t+1$ nodes, however an event about incoming message from a remote
+supernode might only need signatures from enough nodes in the remote supernodes.
+\{TODO: Find out if there is a simple way to generalize these ideas\}.
+
+The events list will be a totally ordered list. Every event in the list will
+have a sequence number. Thus it is not necessary for every node to remember the
+whole list, only the last sequence number of an event. The inner state of every
+node is in fact the ``sum'' of all the events happened so far in the supernode.
+Also note that all the nodes in the supernodes have exactly the same inner
+state, regarding some event sequence number.
+
+Hence whenever a new node wants to join the network, every correct node sends
+his inner state to the new node, so that the new node doesn't have to know all
+the previous events in the list, and it can function as a node in the supernode
+immediately.
+
+At any point in time, a node in the supernode might have a few events that it
+wants to report to the whole supernode. Every node in the supernode will have a
+different order for his ``events to report''.
+
+The protocol will work in iterations: Every iteration will decide over a batch
+of events to be ``added''. We could for example let every node in the supernode
+propose one event to report, and the protocol will decide over a batch of about
+$n-t$ valid events. 
+
+For optimization in network complexity we propose the following: 
+
+We use some hash function $T$ into a set of values $A := [0,1]$. Every node will
+have a different order over the set $A$. If we see $A$ as a circle, then every
+node will have a different starting point for the circle. Node $P_j$ will have
+the starting point $\frac{j-1}{n}$ for example.
+
+Every node will use the hash function $T$ together with his own order over the
+set $A$ to sort his events to report list. Given that the list contains $r$
+events, it will send about $\frac{r}{n}$ events (Or more, if $\frac{r}{n}$ is
+a very small number). 
+
+That way for example if all the nodes have exactly the same set of $r$ events to
+report (This should be about the usual case), then every node will report a
+different set of $r/n$ valid events.
+
+\subsection{Atomic Events protocol}
+
+The implementation of the Atomic Events protocol is somehow a generalization of
+the Interactive Consistency protocol.
+
+\uline{Node $P_j$ with events $l_j := ({e_j}^1,\ldots,{e_j}^{k_j})$}
+\begin{enumerate}
+  \item Generate proposal:
+  \begin{enumerate}
+    \item Invoke C-Cast(`int',$\l_j$).
+    \item Participate in all `int' C-Casts. In addition send back to $P_w$ a
+      signature over $S_w := $($P_w$,seq,amount,commitment), where `seq' is the
+      current sequence number for event choice, `amount' is the amount of events
+      inside $P_w$'s C-Cast, and `commitment' is a commitment over a polynomial
+      that contains the list of events or commitments to events. This polynomial
+      is created in a deterministic way by all the nodes.
+      
+      Every node who completes his C-Cast should have this kind of signature
+      from all nodes who responded.
+    \item Collect $n-t$ `int' C-Casts from other nodes. Out of these, choose a
+      few events from every C-Cast such that the largest amount of unique events
+      possible is chosen.
+    \item Create a polynomial $Q_j$ that contains (As values) the
+      following for every C-Cast from node $P_w$ out of the $n-t$ we got:
+      \begin{itemize}
+        \item A signature over the C-Cast, together with the value $S_w$ for a
+          C-Cast the was received from the node $P_w$.
+        \item The set of chosen messages from the C-Cast. Note that this set
+          should represent the indices of messages chosen, and not the messages
+          themselves.
+      \end{itemize}
+      
+      Generate a commitment $C_j$ to the polynomial. (See the Polynomial
+      Commitment section for more information).
+    \item Send (`share',$C_j$,$z_j$,$\{Q_j(y),s_y\}_{y \in Y_j}$) to every node,
+      where $s_y$ is a proof for the value $Q_j(y)$ corresponding to the
+      commitment $C_j$. $z_j$ is a bit mask representing the chosen C-Casts.
+      $Q_j(y)$ is supposed to also encode a bit mask representing the chosen
+      events out of the specific C-Cast. This bit mask must not be larger than
+      the `amount' parameter inside the corresponding $S_w$ value.
+
+      (Note that we might need more than one polynomial value to encode the
+      values we want to send.)
+
+      Also note that we send a few different values. The specific sent
+      values depend on the participant $P_j$ (They are determined in a pseudo
+      random manner by the value $j$ for example), and their amount is
+      determined according to the chosen size of the polynomial.
+
+    \item Sign any valid `share' messages. Note that if we know two events from
+      `share' message that are the same, we do not sign the `share' message.
+
+      Send back to the sender of the `share' messages a `sign' message of the
+      form (`sign',$s_j$), where $s_j$ is a signature over
+      (`commit',$w$,$C_w$,$z_w$) for example.
+    \item Collect $n-t$ signatures. Combine those into one signature. Let the
+      resulting signature be $V_j$.
+    \item Send (`propose',$C_j$,$z_j$,$V_j$) to all nodes.
+  \end{enumerate}
+  \item Pre-voting a proposal: (Creating a permutation):
+  \begin{enumerate}
+    \item Wait for $n-t$ distinct `propose' messages. Keep them. Let $L_j$ be
+      the set of nodes who send those valid proposals. ($|L_j| = n-t$).
+    \item Invoke C-Cast(`v-commit',$L_j$) to all nodes. Note that this set could
+      be packed as a bit map. $1$ represents: node is inside set, and $0$
+      represents that a node is not inside the set.
+    \item Collect $n-t$ distinct sets $L_w$ from `v-commit' C-Casts. Note that a
+      valid `v-commit' message contains at least $(n-t)$ $1$-bits.
+    \item Generate a pseudo random share $r_j$ with a relevant proof $d_j$. Send
+      to all nodes: (`prand-share',$r_j$,$d_j$).
+    \item Wait for $n-t$ valid pseudo random shares. Combine them to get the
+      value $r$. Use that value to generate a pseudo random permutation $\Pi$.
+      Note: If needed, we might need to send more pseudo random shares to
+      generate some larger permutation.
+  \end{enumerate}
+  \item Voting a proposal:
+  \begin{enumerate}
+    \item Let $i = 1$.
+    \item Repeat:
+      \begin{enumerate}
+        \item Choose a random node from the permutation: $P_w := {\Pi}(i)$.
+        \item If $P_w \in L_j$ then send (`v-vote',$P_w$,$0$,None) to all nodes.
+          Else send (`v-vote',$P_w$,$1$,($C_w$,$z_w$,$V_w$)) to all nodes.
+        \item Wait for $n-t$ valid `v-vote' messages. A `v-vote' message
+          received from node $P_w$ is valid if a `v-commit' message was
+          previously sent from $P_w$, and it is consistent with the `v-vote'.
+          
+          If any of the valid accepted `v-vote' messages has value $1$ then set
+          $v := 1, p:= (C_w,z_w,V_w)$. Else set $v := 0, p:= None$.
+
+        \item Participate in a Binary Validated Byzantine Agreement Biased
+          towards $1$ with value $v$ and proof $p$. Wait for the agreement
+          protocol to decide.
+        \item If decided $0$, set $i := i + 1$. Continue to the next node in the
+          permutation.
+        \item If decided $1$:
+        \begin{enumerate}
+          \item send all known shares for the polynomial of $P_w$.
+          \item Wait for $n-t$ valid shares of the polynomial of $P_w$. Upon
+            receival of $n-t$ such valid shares, reconstruct the polynomial of
+            $P_w$. Call the polynomial $Q_w$.
+
+            If the polynomial $Q_w$ is invalid, remember the node $P_w$ as a
+            corrupt node. Set $i := i + 1$. Continue to the next node in the
+            permutation.
+
+            If the polynomial $Q_w$ is valid (All proofs of C-Casts inside the
+            polynomial are valid, the proofs match the bit mask $z_w$, and
+            sets of events have size larger than the corresponding `amount'
+            parameter) then send any known shares of the relevant events to all
+            nodes, with corresponding proofs. 
+            
+          \item Collect $n-2t$ shares of any event included inside the
+            polynomial $Q_w$, and reconstruct all the events. (If some of these
+            events are similar, remember the node $P_w$ as a corrupt node?).
+
+          \item Sort the received events in some deterministic way, and output
+            this list of events.
+       
+        \end{enumerate}
+      \end{enumerate}
+  \end{enumerate}
+\end{enumerate}

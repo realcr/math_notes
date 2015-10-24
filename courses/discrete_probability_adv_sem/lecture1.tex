@@ -1,0 +1,122 @@
+\part{Intro}
+
+22.10.2015
+
+Asaf Nachmias
+Schreiber 335
+Email: asafnach@pos.tau.ac.il
+       asafnach@gmail.com  (Quicker)
+
+
+A list of papers was given at the beginning of the lesson.
+
+
+\uline{The first two articles:}
+
+
+$n \geq 1$. $S_n$ permutation.
+$T = \{Transpositions\} \subseteq S_n$.
+$|T| = \over{n}{2}$.
+
+Fix $\t \geq 1$. Let $T_1, \dots T_t$ be i.i.d $unif(T)$.
+Put ${\Pi}_t = T_t \compose \cdots \compose T_1$.
+
+
+Every permutation is a composition of transpositions.
+
+\begin{thm} (Schramm)
+  $t = cn$, $c > 1/2$ const, let $(y_1,y_2,\dots)$ be the ordered cycles sizes
+  of ${Pi}_t$, then $\left(y_1/n,y_2/n,\dots) {\rightarrow}^d (X_1,X_2,\dots)$
+    (Poisson-Dirichlet distribution).
+\end{thm}
+
+Analogy: Look at the random graph of $n$ vertices, and we put an edge $(i,j)$ if
+there is $T_k$, $1 \leq k \leq t$ which is the transposition $(i,j)$.
+
+
+If $c < 1/2$ then all the connected components in the graph are smaller than
+$\log(n)$.
+If $c > 1/2$, then there is one linear (Of linear size) connected components,
+and all the rest are of logarithmic size.
+
+We are not sure if all the transpositions inside the giant connected component
+will compose together to be one cycle.
+
+\begin{thm} (81, Diaconis-Shashahani)
+  $||{\Pi}_t - \Pi||_{TV} = o_n(1), c > 1/2$ and $1-o_n(1)$ when $c<1/2$.
+\end{thm}
+
+\begin{thm} (Berestycki)
+Simpler proof and more general for $k$-cycles.
+\end{thm}
+
+
+\uline{Articles 3 and 4}
+
+$G = (V,E)$ is inifinitely connected graph.
+For every $K \subseteq V$, $|K| < \inft$, $d_E{K} : \{\mbox{Edges with one
+endpoint in $K$}\}$.
+
+Cheeger constant:
+${\Phi}_E{G} = \inf \{ \frac{|d_E{K}}{|K|} : K \subseteq V Finite, k \neq
+\emptyset\}$.
+
+If ${\Phi}_E(G) > 0$ then $G$ is non amenable.
+
+A grid graph is not amenable (The cheager constant will be $0$), however the
+${\Phi}_E(\mathcal{T}_d) = d-2$.
+
+
+$G$ ->  $P(x,y) = 1/deg(x)$ if $x~y$, and $0$ otherwise.
+
+$(Pf)(x) = {\sum}_y p(x,y)f(y)$
+
+$||P||_{op} = sup \{ \frac{||Pf||_2}{||f||_2} : f \neq 0\}$
+
+$||P||_{op} \leq 1$
+
+
+\begin{prop}
+$G$ Cayley's graph.
+$p^n(x,x) := $ Probability after $n$ steps is at $x$.
+
+$\ro = {\lim}_{n \rightarrow \inft} (p^{2n}(x,x))^{(1/2n)} = ||P||_{op}$.
+\end{prop}
+
+\begin{thm}
+  ${{{\Phi}_E}^2}/2 \leq 1 - \ro \leq {\Phi}_E$
+
+\end{thm}
+
+$\ro(T_d) = \frac{2\sqrt(d-1)}{d}$.
+
+\begin{thm}
+  Kesten (64)
+  $G$ is a cayley graph ($d$-regular), $\ro(G) \geq \ro(T_d) = 2\sqrt(d-1)/d$.
+  And $\ro(G) = 2\sqrt(d-1)/d$ iff $G=T_d$.
+
+\end{thm}
+
+Extensions: (Paper 3): Simpler proofs and some more general graphs.
+
+
+\uline{The Percolation articles}
+
+Percolation: $G$ infinite connected graph, $p \in [0,1]$.
+Delete each edge with probability $1-p$, retain with probability $p$.
+$G$ is a cayley graph.
+
+$E$: There exists infinite connected component. (Check that this event is
+measurable).
+
+By the Kolmagorov theorem, the probability of this event must be either $0$ or
+$1$.
+
+A result by Kesten-Harris: $p_c(\mathcal{Z}^2) = 1/2$.
+
+
+When is $p_c < 1$? $\mathcal{Z}$.
+Conjecture: Every Cayley graph of growth $>1$, $p_c < 1$.
+
+It is known when $G$ has polynomial growth. $|B(0,r)| \leq Cr^D$, and when $G$
+is non amenable. Also known when $G$ has exponential growth.
