@@ -12,8 +12,29 @@
 \usepackage{hyperref} %%% To get clickable refs.
             %%% And content tree in the side pane.
 
-\makeatletter
 
+%%%%%%%%%%%[ Begin abs,norm ]%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% http://tex.stackexchange.com/questions/43008/absolute-value-symbols
+% About absolute values and norms.
+\usepackage{mathtools}
+
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\DeclarePairedDelimiter\norm{\lVert}{\rVert}
+
+% Swap the definition of \abs* and \norm*, so that \abs
+% and \norm resizes the size of the brackets, and the 
+% starred version does not.
+\makeatletter
+\let\oldabs\abs
+\def\abs{\@ifstar{\oldabs}{\oldabs*}}
+%
+\let\oldnorm\norm
+\def\norm{\@ifstar{\oldnorm}{\oldnorm*}}
+\makeatother
+
+%%%%%%%%%%%%%%%%%%%%%%%%[end abs,norm]%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
 \floatstyle{ruled}
 \newfloat{algorithm}{tbp}{loa}
@@ -25,21 +46,27 @@
 \numberwithin{figure}{section}
 \theoremstyle{plain}
 \newtheorem{thm}{\protect\theoremname}[section]
-  \theoremstyle{definition}
-  \newtheorem{defn}[thm]{\protect\definitionname}
-  \theoremstyle{plain}
-  \newtheorem{lem}[thm]{\protect\lemmaname}
+
+\theoremstyle{definition}
+\newtheorem{defn}[thm]{\protect\definitionname}
+
+\theoremstyle{plain}
+\newtheorem{lem}[thm]{\protect\lemmaname}
+
+\theoremstyle{plain}
+\newtheorem{prop}[thm]{\protect\propname}
 
 \makeatother
 
 \usepackage{babel}
   \providecommand{\definitionname}{Definition}
   \providecommand{\lemmaname}{Lemma}
-\providecommand{\theoremname}{Theorem}
+  \providecommand{\theoremname}{Theorem}
+  \providecommand{\propname}{Proposition}
 \setcounter{tocdepth}{3}
 \begin{document}
 
-\title{Sample Title}
+\title{Advanced Seminar in Discrete Probability}
 
 
 \date{}
